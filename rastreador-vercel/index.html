@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Cliques WhatsApp</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#6b6b6b;--card:#f4f4f2;--ac:#1d9a5b}
+@media(prefers-color-scheme:dark){:root{--bg:#161616;--fg:#f0f0f0;--mut:#a0a0a0;--card:#232323;--ac:#3ecf8e}}
+body{margin:0;padding:20px;background:var(--bg);color:var(--fg);font:16px system-ui,sans-serif;max-width:640px;margin-inline:auto}
+.card{background:var(--card);border-radius:12px;padding:16px;margin:14px 0}
+h1{font-size:20px}h2{font-size:16px;margin:0 0 4px}.big{font-size:40px;font-weight:700;color:var(--ac)}
+.mut{color:var(--mut);font-size:13px}input,button{font:inherit;padding:10px;border-radius:8px;border:1px solid var(--mut);background:var(--bg);color:var(--fg)}
+button{cursor:pointer}.row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:14px}
+.bar{height:10px;background:var(--ac);border-radius:4px;min-width:2px}.d{width:48px;color:var(--mut)}
+</style></head><body>
+<h1>Cliques no WhatsApp</h1>
+<div id="login" class="card"><input id="k" type="password" placeholder="Senha do painel"> <button onclick="go()">Entrar</button><div id="err" class="mut"></div></div>
+<div id="out"></div>
+<script>
+const $=id=>document.getElementById(id);
+let key=localStorage.getItem("pk")||"";
+if(key){$("k").value=key;go()}
+async function go(){
+  key=$("k").value;
+  const r=await fetch("/api/stats",{headers:{"x-key":key}});
+  if(!r.ok){$("err").textContent="Senha incorreta";return}
+  localStorage.setItem("pk",key);$("login").style.display="none";
+  render(await r.json());
+}
+function days(n){const a=[];for(let i=n-1;i>=0;i--){a.push(new Date(Date.now()-i*864e5).toLocaleDateString("en-CA",{timeZone:"America/Sao_Paulo"}))}return a}
+function render(s){
+  $("out").innerHTML=s.links.map(l=>{
+    const t=s.total[l]||0,bd=s.byDay[l]||{},bs=s.bySrc[l]||{};
+    const ds=days(14),mx=Math.max(1,...ds.map(d=>bd[d]||0));
+    const hoje=bd[ds[13]]||0, sem=ds.slice(7).reduce((a,d)=>a+(bd[d]||0),0);
+    const link=location.origin+"/w/"+l;
+    return `<div class="card"><h2>${l}</h2>
+    <div class="mut">${link} <button onclick="navigator.clipboard.writeText('${link}')">Copiar</button></div>
+    <div class="big">${t}</div><div class="mut">cliques no total · ${hoje} hoje · ${sem} nos últimos 7 dias</div>
+    <p class="mut">Últimos 14 dias</p>
+    ${ds.map(d=>`<div class="row"><span class="d">${d.slice(5).split("-").reverse().join("/")}</span><div class="bar" style="width:${(bd[d]||0)/mx*60}%"></div><span>${bd[d]||0}</span></div>`).join("")}
+    <p class="mut">Origem (use ?src=bio, ?src=stories...)</p>
+    ${Object.entries(bs).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="row"><span>${k}</span><b>${v}</b></div>`).join("")||'<div class="mut">Sem cliques ainda</div>'}
+    </div>`}).join("");
+}
+</script></body></html>
